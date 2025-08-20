@@ -285,6 +285,9 @@
             </div>
         </div>
 
+        <input type="search" id="search-bar" placeholder="Search files/folders..."
+            style="display: none; width: 100%; box-sizing: border-box; padding: 5px; margin-top: 10px; margin-bottom: 5px;">
+
         <div id="tree-view">
             <div id="tree-loader"></div>
             <div>Select a folder above...</div>
@@ -328,6 +331,7 @@
         const selectAllButton = document.getElementById('select-all');
         const unselectAllButton = document.getElementById('unselect-all');
         const treeControls = document.getElementById('tree-controls');
+        const searchBar = document.getElementById('search-bar');
         const customInstructionsInput = document.getElementById('custom-instructions');
         const resizerHandle = document.getElementById('resizer-handle');
         const customInstructionsContainer = document.getElementById('custom-instructions-container');
@@ -355,6 +359,7 @@
         selectAllButton.addEventListener('click', () => toggleAllCheckboxes(true));
         unselectAllButton.addEventListener('click', () => toggleAllCheckboxes(false));
         treeView.addEventListener('click', handleTreeClick);
+        searchBar.addEventListener('input', handleSearch);
         customInstructionsInput.addEventListener('input', saveCustomInstructionsContent);
         document.addEventListener('DOMContentLoaded', loadCustomInstructions);
 
@@ -553,6 +558,9 @@
         function handleFolderSelection(event) {
             const files = event.target.files;
             treeControls.style.display = 'none';
+            searchBar.style.display = 'none';
+            searchBar.value = '';
+
 
             // --- Immediate UI Update ---
             const initialMessage = treeView.querySelector('div:not(#tree-loader)');
@@ -719,11 +727,13 @@
                         treeView.appendChild(rootUl);
                         addCheckboxListeners();
                         treeControls.style.display = 'flex';
+                        searchBar.style.display = 'block';
                     } else {
                         const msgDiv = document.createElement('div');
                         msgDiv.textContent = 'Selected folder is empty or all contents were ignored.';
                         treeView.appendChild(msgDiv);
                         treeControls.style.display = 'none';
+                        searchBar.style.display = 'none';
                     }
 
                 } catch (error) {
@@ -955,7 +965,7 @@
         function generateTextTree(parentElement, prefix, filesToReadPaths) {
             let treeString = '';
             if (!parentElement) return '';
-            const children = Array.from(parentElement.children).filter(el => el.tagName === 'LI');
+            const children = Array.from(parentElement.children).filter(el => el.tagName === 'LI' && el.style.display !== 'none');
 
             children.forEach((li, index) => {
                 const checkbox = li.querySelector(':scope > label > input[type="checkbox"]');
@@ -1113,6 +1123,58 @@
             saveCustomInstructionsHeight();
         }
 
+        function isMatch(name, queryWords) {
+            let lastIndex = -1;
+            for (const word of queryWords) {
+                const currentIndex = name.indexOf(word, lastIndex + 1);
+                if (currentIndex === -1) {
+                    return false;
+                }
+                lastIndex = currentIndex;
+            }
+            return true;
+        }
+
+        function handleSearch(event) {
+            const query = event.target.value.toLowerCase().trim();
+            const allItems = treeView.querySelectorAll('li');
+
+            if (!query) {
+                allItems.forEach(li => {
+                    li.style.display = '';
+                });
+                return;
+            }
+
+            const queryWords = query.split(/\s+/).filter(Boolean);
+
+            allItems.forEach(li => {
+                li.style.display = 'none';
+            });
+
+            allItems.forEach(li => {
+                const label = li.querySelector(':scope > label');
+                if (!label) return;
+
+                const name = Array.from(label.childNodes)
+                    .filter(node => node.nodeType === Node.TEXT_NODE)
+                    .map(node => node.textContent)
+                    .join('')
+                    .trim()
+                    .toLowerCase();
+
+                if (isMatch(name, queryWords)) {
+                    let current = li;
+                    while (current && current.tagName === 'LI') {
+                        current.style.display = '';
+                        if (current.classList.contains('folder')) {
+                            current.classList.remove('collapsed');
+                        }
+                        current = current.parentElement.closest('li');
+                    }
+                }
+            });
+        }
     </script>
 </body>
 
