@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repo Structure Tool</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+            user-select: none;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+        }
+        #sidebar {
+            width: 350px;
+            border-right: 1px solid #ccc;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #fff;
+            height: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        #main-content {
+            flex-grow: 1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+            min-width: 0;
+        }
+         #tree-controls {
+             display: none;
+             gap: 10px;
+             margin-bottom: 10px;
+             margin-top: 10px;
+             flex-wrap: wrap;
+         }
+         #tree-controls button {
+             padding: 4px 8px;
+             font-size: 0.9em;
+             cursor: pointer;
+         }
+        #tree-view {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 5px;
+            min-height: 100px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #tree-loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        #tree-view.loading #tree-loader {
+             display: block;
+        }
+        #tree-view.loading > ul,
+        #tree-view.loading > div:not(#tree-loader) {
+             visibility: hidden;
+        }
+        #tree-view ul {
+            list-style-type: none;
+            padding-left: 20px;
+            margin: 0;
+            width: 100%;
+            align-self: flex-start;
+        }
+         #tree-view li.folder.collapsed > ul {
+             display: none;
+         }
+        #tree-view li {
+            margin: 2px 0;
+        }
+        #tree-view label {
+            cursor: default;
+            display: inline-flex;
+            align-items: center;
+            word-break: break-word;
+            max-width: 100%;
+        }
+         #tree-view input[type="checkbox"] {
+            margin-right: 5px;
+            flex-shrink: 0;
+         }
+         .folder-toggle {
+             cursor: pointer;
+             display: inline-flex;
+             align-items: center;
+             margin-right: 3px;
+         }
+         .folder-toggle::before {
+             content: '📂';
+             font-size: 0.9em;
+             width: 1.2em;
+             display: inline-block;
+         }
+         #tree-view li.folder.collapsed > label > .folder-toggle::before {
+            content: '📁';
+         }
+        .file > label > .file-icon::before {
+            content: '📄';
+            margin-right: 3px;
+            font-size: 0.9em;
+             width: 1.2em;
+             display: inline-block;
+        }
+        #output-container {
+            flex-grow: 1;
+            position: relative;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            min-height: 100px;
+            display: flex;
+        }
+        #output {
+            white-space: pre;
+            font-family: monospace;
+            padding: 10px;
+            overflow: auto;
+            flex-grow: 1;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+         #copy-button {
+            position: absolute;
+            top: 5px;
+            right: 25px;
+            padding: 5px 8px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 1.2em;
+             display: none;
+             z-index: 10;
+        }
+        #copy-button:hover {
+            background-color: #d0d0d0;
+        }
+        button#generate-button {
+            padding: 8px 15px;
+            cursor: pointer;
+             margin-top: 10px;
+        }
+        h3 {
+            margin-top: 0;
+             margin-bottom: 10px;
+        }
+        h4 {
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+        #loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+         .info {
+             font-size: 0.8em;
+             color: #555;
+             margin-top: 5px;
+             margin-bottom: 10px;
+         }
+         #custom-instructions-container {
+             position: relative;
+             margin-top: 5px;
+         }
+         #resizer-handle {
+            position: absolute;
+            top: -10px;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            cursor: row-resize;
+            z-index: 1;
+         }
+         #custom-instructions {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            height: 80px;
+            min-height: 40px;
+            font-family: monospace;
+            font-size: 0.9em;
+            border: 1px solid #ccc;
+            padding: 5px;
+            margin: 0;
+            overflow: auto;
+            resize: none;
+         }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h3>Select Folder & Files</h3>
+         <div class="info">Files matching .gitignore and `.git/` folders are excluded.</div>
+        <input type="file" id="folder-input" webkitdirectory directory multiple>
+
+        <div id="tree-controls">
+             <button id="expand-all">Expand All</button>
+             <button id="collapse-all">Collapse All</button>
+        </div>
+
+        <div id="tree-view">
+            <div id="tree-loader"></div>
+            <div>Select a folder above...</div>
+        </div>
+        <button id="generate-button">Generate Output</button>
+    </div>
+    <div id="main-content">
+        <h3>Generated Output</h3>
+        <div id="output-container">
+            <pre id="output">Output will appear here...</pre>
+            <button id="copy-button" title="Copy to Clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                </svg>
+            </button>
+        </div>
+         <h4>Append Custom Instructions</h4>
+         <div id="custom-instructions-container">
+             <div id="resizer-handle"></div>
+             <textarea id="custom-instructions" placeholder="Enter any additional instructions to include at the end..."></textarea>
+         </div>
+    </div>
+    <div id="loading">Generating...</div>
+
+    <script>
+        const folderInput = document.getElementById('folder-input');
+        const treeView = document.getElementById('tree-view');
+        const treeLoader = document.getElementById('tree-loader');
+        const generateButton = document.getElementById('generate-button');
+        const outputElement = document.getElementById('output');
+        const outputContainer = document.getElementById('output-container');
+        const copyButton = document.getElementById('copy-button');
+        const loadingIndicator = document.getElementById('loading');
+        const expandAllButton = document.getElementById('expand-all');
+        const collapseAllButton = document.getElementById('collapse-all');
+        const treeControls = document.getElementById('tree-controls');
+        const customInstructionsInput = document.getElementById('custom-instructions');
+        const resizerHandle = document.getElementById('resizer-handle');
+        const customInstructionsContainer = document.getElementById('custom-instructions-container');
+
+
+        const CUSTOM_INSTRUCTIONS_STORAGE_KEY = 'repoStructureTool_customInstructions';
+        const CUSTOM_INSTRUCTIONS_HEIGHT_KEY = 'repoStructureTool_customInstructionsHeight';
+
+
+        let fileMap = new Map();
+        let rootFolderName = '';
+        let gitignoreRules = new Map();
+
+        let isResizing = false;
+        let initialY = 0;
+        let initialHeight = 0;
+        const minTextareaHeight = 40;
+
+
+        folderInput.addEventListener('change', handleFolderSelection);
+        generateButton.addEventListener('click', generateOutput);
+        copyButton.addEventListener('click', copyToClipboard);
+        expandAllButton.addEventListener('click', () => toggleAllFolders(false));
+        collapseAllButton.addEventListener('click', () => toggleAllFolders(true));
+        treeView.addEventListener('click', handleTreeClick);
+        customInstructionsInput.addEventListener('input', saveCustomInstructionsContent);
+        document.addEventListener('DOMContentLoaded', loadCustomInstructions);
+
+        resizerHandle.addEventListener('mousedown', startResize);
+
+
+        function handleTreeClick(event) {
+            const toggle = event.target.closest('.folder-toggle');
+             if (toggle) {
+                const li = toggle.closest('li.folder');
+                if (li) {
+                    li.classList.toggle('collapsed');
+                }
+            }
+        }
+
+        function toggleAllFolders(collapse) {
+            const folderItems = treeView.querySelectorAll('li.folder');
+            folderItems.forEach(li => {
+                li.classList[collapse ? 'add' : 'remove']('collapsed');
+            });
+        }
+
+
+        function getDirPath(filePath) {
+            const parts = filePath.split('/');
+            if (parts.length <= 1) return '';
+
+            const rootIndex = parts.indexOf(rootFolderName);
+            if (rootIndex === -1) {
+                console.warn("Root folder name not found in path:", filePath);
+                return parts.slice(0, -1).join('/');
+            }
+            return parts.slice(rootIndex + 1, -1).join('/');
+        }
+
+        function parseAndCompileGitignore(content, gitignoreDirRelativePath) {
+            if (!content) return [];
+            const lines = content.split('\n');
+            const compiledRules = [];
+
+            for (const line of lines) {
+                const compiled = gitignorePatternToRegex(line, gitignoreDirRelativePath);
+                if (compiled) {
+                    compiledRules.push(compiled);
+                }
+            }
+            return compiledRules;
+        }
+
+        function gitignorePatternToRegex(patternLine, gitignoreDirRelativePath) {
+            const originalPattern = patternLine.trim();
+            if (!originalPattern || originalPattern.startsWith('#')) {
+                return null;
+            }
+
+            let isNegation = false;
+            let pattern = originalPattern;
+            if (pattern.startsWith('!')) {
+                isNegation = true;
+                pattern = pattern.substring(1);
+            }
+
+            let isAnchored = false;
+            if (pattern.startsWith('/')) {
+                isAnchored = true;
+                pattern = pattern.substring(1);
+            }
+
+            let isDirOnly = false;
+            if (pattern.endsWith('/')) {
+                isDirOnly = true;
+                pattern = pattern.substring(0, pattern.length - 1);
+            }
+
+            if (!pattern) return null;
+
+            let regexString = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+                                     .replace(/\\\*\\\*/g, '.*')
+                                     .replace(/\\\*/g, '[^/]*')
+                                     .replace(/\\\?/g, '[^/]');
+
+            let finalRegexString;
+
+            if (isAnchored) {
+                finalRegexString = '^' + regexString;
+                if (isDirOnly) {
+                    finalRegexString += '/$';
+                } else {
+                    finalRegexString += '(/$|$)';
+                }
+            } else if (pattern.includes('/')) {
+                 finalRegexString = '^' + regexString;
+                 if (isDirOnly) {
+                    finalRegexString += '/$';
+                 } else {
+                    finalRegexString += '(/$|$)';
+                 }
+            } else {
+                finalRegexString = '(^|/)' + regexString + '(/$|$)';
+            }
+
+            try {
+                return {
+                    regex: new RegExp(finalRegexString),
+                    isNegation: isNegation,
+                    isDirOnly: isDirOnly,
+                    originalPattern: originalPattern
+                };
+            } catch (e) {
+                console.error(`Invalid regex generated for pattern: '${originalPattern}' -> '${finalRegexString}'`, e);
+                return null;
+            }
+        }
+
+
+        function isIgnored(itemFullPath, isDirectory) {
+            if (itemFullPath === rootFolderName + '/.git' || itemFullPath.startsWith(rootFolderName + '/.git/')) {
+                return true;
+            }
+
+            let pathRelativeToRoot;
+             if (itemFullPath.startsWith(rootFolderName + '/')) {
+                pathRelativeToRoot = itemFullPath.substring(rootFolderName.length + 1);
+             } else if (itemFullPath === rootFolderName || itemFullPath === rootFolderName + '/') {
+                pathRelativeToRoot = "";
+             } else {
+                 console.warn(`Cannot determine relative path for: ${itemFullPath}`);
+                 return false;
+             }
+
+            const pathForMatching = (isDirectory && pathRelativeToRoot !== "" && !pathRelativeToRoot.endsWith('/'))
+                ? pathRelativeToRoot + '/'
+                : pathRelativeToRoot;
+
+            let lastMatch = null;
+            let lastMatchLevel = -1;
+
+            const pathParts = pathRelativeToRoot.split('/').filter(p => p);
+            const relevantDirs = [''];
+
+            let currentPath = '';
+            const dirPartsToCheck = (isDirectory ? pathParts : pathParts.slice(0, -1));
+
+            for (let i = 0; i < dirPartsToCheck.length; i++) {
+                currentPath = currentPath ? `${currentPath}/${dirPartsToCheck[i]}` : dirPartsToCheck[i];
+                relevantDirs.push(currentPath);
+            }
+
+            for (let level = 0; level < relevantDirs.length; level++) {
+                const gitignoreDirRelativePath = relevantDirs[level];
+                const compiledRules = gitignoreRules.get(gitignoreDirRelativePath);
+
+                if (compiledRules) {
+                    let pathToCheckAgainstRules;
+                    if (gitignoreDirRelativePath === '') {
+                         pathToCheckAgainstRules = pathForMatching;
+                    } else {
+                        const prefix = gitignoreDirRelativePath + '/';
+                        if (pathForMatching.startsWith(prefix)) {
+                             pathToCheckAgainstRules = pathForMatching.substring(prefix.length);
+                        } else {
+                             continue;
+                        }
+                    }
+
+                    for (const rule of compiledRules) {
+                        if (typeof pathToCheckAgainstRules !== 'string') continue;
+
+                        if (rule.regex.test(pathToCheckAgainstRules)) {
+                            if (rule.isDirOnly && !isDirectory) {
+                                continue;
+                            }
+                            lastMatch = rule;
+                            lastMatchLevel = level;
+                        }
+                    }
+                }
+            }
+
+            if (lastMatch) {
+                return !lastMatch.isNegation;
+            }
+
+            return false;
+        }
+
+
+        function handleFolderSelection(event) {
+            const files = event.target.files;
+            treeControls.style.display = 'none';
+
+            // --- Immediate UI Update ---
+            const initialMessage = treeView.querySelector('div:not(#tree-loader)');
+            if (initialMessage) initialMessage.style.display = 'none';
+            const existingUl = treeView.querySelector('ul');
+            if (existingUl) existingUl.remove();
+            const existingError = treeView.querySelector('div[style*="color: red"]');
+            if (existingError) existingError.remove();
+
+            treeView.classList.add('loading');
+            // --- End Immediate UI Update ---
+
+            // Defer processing to allow spinner rendering
+            setTimeout(async () => {
+                if (!files.length) {
+                    if (initialMessage) {
+                        initialMessage.textContent = 'No folder selected or folder is empty.';
+                        initialMessage.style.display = 'block';
+                    } else {
+                        const msgDiv = document.createElement('div');
+                        msgDiv.textContent = 'No folder selected or folder is empty.';
+                        treeView.appendChild(msgDiv);
+                    }
+                    treeView.classList.remove('loading');
+                    folderInput.value = ''; // Allow re-selecting the same folder
+                    return;
+                }
+
+                try {
+                    gitignoreRules.clear();
+                    outputElement.textContent = 'Output will appear here...';
+                    copyButton.style.display = 'none';
+                    fileMap.clear();
+
+                    rootFolderName = files[0].webkitRelativePath.split('/')[0];
+                    if (!rootFolderName) {
+                         console.error("Could not determine root folder name.");
+                         throw new Error("Could not determine root folder name.");
+                    }
+
+                    const gitignorePromises = [];
+                    for (const file of files) {
+                         if (file.webkitRelativePath.startsWith(rootFolderName + '/.git/') || file.webkitRelativePath === rootFolderName + '/.git') {
+                             continue;
+                         }
+                        if (file.name === '.gitignore') {
+                            const dirPathRelativeToRoot = getDirPath(file.webkitRelativePath);
+                            gitignorePromises.push(
+                                readFileContent(file).then(content => {
+                                    const compiledRules = parseAndCompileGitignore(content, dirPathRelativeToRoot);
+                                    if (compiledRules.length > 0) {
+                                        gitignoreRules.set(dirPathRelativeToRoot, compiledRules);
+                                    }
+                                }).catch(err => console.error(`Failed to read/parse .gitignore ${file.webkitRelativePath}:`, err))
+                            );
+                        }
+                    }
+                    await Promise.all(gitignorePromises);
+
+
+                    const structure = {};
+                    const allPaths = new Set();
+
+                    for (const file of files) {
+                         const fullPath = file.webkitRelativePath;
+                         allPaths.add(fullPath);
+
+                         const pathParts = fullPath.split('/');
+                         let currentDirPath = '';
+                         for (let i = 0; i < pathParts.length -1; i++) {
+                             currentDirPath = pathParts.slice(0, i + 1).join('/');
+                             allPaths.add(currentDirPath + '/');
+                         }
+                    }
+
+                     for (const itemPath of allPaths) {
+                         const isDirectory = itemPath.endsWith('/');
+                         let structurePath = isDirectory ? itemPath.slice(0, -1) : itemPath;
+
+                         if (isIgnored(itemPath, isDirectory)) {
+                             continue;
+                         }
+
+                          const pathPartsCheck = structurePath.split('/');
+                          let parentIsIgnored = false;
+                          for (let i = 0; i < pathPartsCheck.length - (isDirectory ? 0 : 1); i++) {
+                              const dirPathToCheck = pathPartsCheck.slice(0, i + 1).join('/') + '/';
+                              if (dirPathToCheck !== itemPath && isIgnored(dirPathToCheck, true)) {
+                                   parentIsIgnored = true;
+                                   break;
+                              }
+                          }
+                          if (parentIsIgnored) {
+                               continue;
+                          }
+
+
+                          if (!isDirectory) {
+                               const originalFile = Array.from(files).find(f => f.webkitRelativePath === itemPath);
+                               if(originalFile) {
+                                   fileMap.set(itemPath, originalFile);
+                               } else {
+                                   console.warn("Original file object not found for path:", itemPath);
+                               }
+                          }
+
+                         let currentLevel = structure;
+                         const pathPartsBuild = structurePath.split('/');
+                         for (let i = 0; i < pathPartsBuild.length; i++) {
+                             const part = pathPartsBuild[i];
+                             const isFilePart = i === pathPartsBuild.length - 1 && !isDirectory;
+                             const nodePath = (i === pathPartsBuild.length - 1) ? itemPath : pathPartsBuild.slice(0, i + 1).join('/') + '/';
+
+                             if (!currentLevel[part]) {
+                                 currentLevel[part] = {
+                                     _isFile: isFilePart,
+                                     _path: nodePath,
+                                     _children: isFilePart ? null : {}
+                                 };
+                             } else {
+                                 if (!isFilePart) {
+                                     currentLevel[part]._isFile = false;
+                                     if (!currentLevel[part]._children) currentLevel[part]._children = {};
+                                     if (!currentLevel[part]._path.endsWith('/')) currentLevel[part]._path += '/';
+                                 }
+                             }
+                             if (!isFilePart) {
+                                 currentLevel = currentLevel[part]._children;
+                             }
+                         }
+                     }
+
+
+                    const rootUl = document.createElement('ul');
+                    const rootNodeData = structure[rootFolderName];
+                    let treeBuilt = false;
+
+                    if (rootNodeData) {
+                         if (!isIgnored(rootFolderName + '/', true)) {
+                             const rootLi = createTreeElement(rootFolderName, rootNodeData, true);
+                             rootUl.appendChild(rootLi);
+                             if (rootNodeData._children) {
+                                renderTree(rootNodeData._children, rootLi.querySelector('ul'), false);
+                             }
+                             treeBuilt = true;
+                         } else {
+                              throw new Error(`Root folder '${rootFolderName}' is ignored by .gitignore rules.`);
+                         }
+                    } else {
+                         renderTree(structure, rootUl, true);
+                         if (rootUl.hasChildNodes()) {
+                             treeBuilt = true;
+                         }
+                    }
+
+                    // Clear potential remnants before adding the new tree
+                    const currentMessage = treeView.querySelector('div:not(#tree-loader)');
+                    if (currentMessage) currentMessage.remove();
+                    const currentError = treeView.querySelector('div[style*="color: red"]');
+                    if (currentError) currentError.remove();
+
+
+                    if (treeBuilt) {
+                        treeView.appendChild(rootUl);
+                        addCheckboxListeners();
+                        treeControls.style.display = 'flex';
+                    } else {
+                         const msgDiv = document.createElement('div');
+                         msgDiv.textContent = 'Selected folder is empty or all contents were ignored.';
+                         treeView.appendChild(msgDiv);
+                         treeControls.style.display = 'none';
+                    }
+
+                } catch (error) {
+                     console.error("Error handling folder selection:", error);
+                     // Clear potential remnants before showing error
+                     const currentMessage = treeView.querySelector('div:not(#tree-loader)');
+                     if (currentMessage) currentMessage.remove();
+                     const currentUl = treeView.querySelector('ul');
+                     if (currentUl) currentUl.remove();
+                     const currentError = treeView.querySelector('div[style*="color: red"]');
+                     if (currentError) currentError.remove();
+
+                     const errorDiv = document.createElement('div');
+                     errorDiv.textContent = `Error processing folder: ${error.message}`;
+                     errorDiv.style.color = 'red';
+                     treeView.appendChild(errorDiv);
+                } finally {
+                     treeView.classList.remove('loading'); // Hide spinner
+                     folderInput.value = ''; // Allow re-selecting the same folder
+                }
+            }, 0); // End of setTimeout
+        }
+
+
+        function renderTree(nodes, parentElement, isRootLevel = false) {
+             const sortedKeys = Object.keys(nodes).sort((a, b) => {
+                const nodeA = nodes[a];
+                const nodeB = nodes[b];
+                if(!nodeA || !nodeB) return 0;
+                if (nodeA._isFile !== nodeB._isFile) return nodeA._isFile ? 1 : -1;
+                return a.localeCompare(b);
+            });
+
+            for (const key of sortedKeys) {
+                 const node = nodes[key];
+                 if (!node) continue;
+
+                 const li = createTreeElement(key, node, false);
+                 parentElement.appendChild(li);
+
+                 if (!node._isFile && node._children && Object.keys(node._children).length > 0) {
+                     const childUl = li.querySelector('ul');
+                     renderTree(node._children, childUl, false);
+                 }
+            }
+        }
+
+        function createTreeElement(name, node, isRoot) {
+            const li = document.createElement('li');
+            li.classList.add(node._isFile ? 'file' : 'folder');
+            if (isRoot) li.classList.add('root');
+            li.dataset.path = node._path;
+
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = true;
+            checkbox.dataset.path = node._path;
+
+            if (node._isFile) {
+                 const iconSpan = document.createElement('span');
+                 iconSpan.className = 'file-icon';
+                 label.appendChild(iconSpan);
+                 label.appendChild(checkbox);
+            } else {
+                 const toggleSpan = document.createElement('span');
+                 toggleSpan.className = 'folder-toggle';
+                 label.appendChild(toggleSpan);
+                 label.appendChild(checkbox);
+            }
+
+            label.appendChild(document.createTextNode(name));
+            li.appendChild(label);
+
+             if (!node._isFile) {
+                const ul = document.createElement('ul');
+                li.appendChild(ul);
+            }
+            return li;
+        }
+
+        function addCheckboxListeners() {
+            treeView.addEventListener('change', (event) => {
+                if (event.target.type === 'checkbox') {
+                    const li = event.target.closest('li');
+                    if (!li) return;
+                    const isChecked = event.target.checked;
+                    const childCheckboxes = li.querySelectorAll('input[type="checkbox"]');
+                    childCheckboxes.forEach(cb => {
+                        if(cb !== event.target) cb.checked = isChecked;
+                    });
+                }
+            });
+        }
+
+
+        async function generateOutput() {
+             loadingIndicator.style.display = 'block';
+             outputElement.textContent = 'Generating...';
+             copyButton.style.display = 'none';
+             
+             // Use requestAnimationFrame to ensure UI update
+             await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
+
+             try {
+                 const outputParts = [];
+                 const filesToReadPaths = [];
+                 const rootUl = treeView.querySelector(':scope > ul');
+
+                 let treeString = '';
+                 if (rootUl && rootUl.children.length > 0) {
+                     const rootLi = rootUl.children[0];
+                      if (rootLi && rootLi.classList.contains('root')) {
+                         const rootCheckbox = rootLi.querySelector(':scope > label > input[type="checkbox"]');
+                         const rootLabel = rootLi.querySelector(':scope > label');
+                         const rootName = Array.from(rootLabel.childNodes).filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent).join('').trim();
+
+                         if (rootCheckbox && rootCheckbox.checked) {
+                             treeString += `${rootName}/\n`;
+                             const childUl = rootLi.querySelector(':scope > ul');
+                             if(childUl) {
+                                 treeString += generateTextTree(childUl, '    ', filesToReadPaths);
+                             }
+                         } else if (rootCheckbox) {
+                              const childUl = rootLi.querySelector(':scope > ul');
+                              if(childUl) {
+                                   treeString += generateTextTree(childUl, '', filesToReadPaths);
+                              }
+                         }
+                     } else {
+                         treeString += generateTextTree(rootUl, '', filesToReadPaths);
+                     }
+                 }
+
+                 outputParts.push("```text\n" + (treeString || "No items selected or available.") + "\n```\n\n");
+
+                 // Process files in smaller batches for better performance with deep structures
+                 const BATCH_SIZE = 50;
+                 const fileContentsResults = [];
+                 
+                 for (let i = 0; i < filesToReadPaths.length; i += BATCH_SIZE) {
+                     const batch = filesToReadPaths.slice(i, i + BATCH_SIZE);
+                     const batchResults = await Promise.all(batch.map(async (path) => {
+                         const file = fileMap.get(path);
+                         if (!file) {
+                             console.warn(`File not found in map: ${path}`);
+                             return `--- File: ${path} ---\nError: File object not found in map.\n\n`;
+                         }
+
+                         // Safer path display calculation
+                         let displayPath = path;
+                         try {
+                             // Try to get the root path from the actual tree
+                             const rootLiElement = treeView.querySelector('li.root');
+                             if (rootLiElement && rootLiElement.dataset.path) {
+                                const rootPath = rootLiElement.dataset.path;
+                                // Normalize paths by removing trailing slashes
+                                const normalizedRootPath = rootPath.replace(/\/$/, '');
+                                const normalizedFullPath = path.replace(/\/$/, '');
+                                
+                                if (normalizedFullPath.startsWith(normalizedRootPath + '/')) {
+                                     displayPath = normalizedFullPath.substring(normalizedRootPath.length + 1);
+                                } else if (normalizedFullPath === normalizedRootPath) {
+                                     displayPath = path.split('/').pop() || path;
+                                }
+                             } else if (rootFolderName) {
+                                  // Fallback to using rootFolderName
+                                  if (path.startsWith(rootFolderName + '/')) {
+                                       displayPath = path.substring(rootFolderName.length + 1);
+                                  }
+                             }
+                             
+                             // Clean up any remaining issues
+                             displayPath = displayPath.replace(/^\/+/, '').replace(/\/+$/, '');
+                             if (!displayPath) displayPath = path.split('/').pop() || path;
+                             
+                         } catch (e) {
+                             console.error("Error calculating display path:", e, "for path:", path);
+                             displayPath = path;
+                         }
+
+                         try {
+                              const isLikelyText = (file.type && (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('xml') || file.type.includes('javascript') || file.type.includes('typescript') || file.type.includes('yaml') || file.type.includes('toml') || file.type.includes('svg'))) ||
+                                                  /\.(txt|md|py|js|ts|jsx|tsx|html|htm|css|scss|sass|less|json|xml|yaml|yml|sh|bat|ps1|java|c|cpp|h|hpp|cs|go|rb|php|sql|rs|toml|ini|cfg|conf|log|svg|gitignore|dockerfile|env)$/i.test(file.name);
+
+                              if (!isLikelyText && file.size > 1 * 1024 * 1024) {
+                                    return `--- File: ${displayPath} ---\n[Skipping potentially large non-text file: ${file.type || 'unknown type'}, Size: ${Math.round(file.size / 1024)} KB]\n\n`;
+                              }
+
+                             const content = await readFileContent(file);
+                             return `--- File: ${displayPath} ---\n\`\`\`\n${content}\n\`\`\`\n\n`;
+                         } catch (error) {
+                             console.error(`Error reading file ${path}:`, error);
+                             return `--- File: ${displayPath} ---\nError reading file: ${error.message}\n\n`;
+                         }
+                     }));
+                     
+                     fileContentsResults.push(...batchResults);
+                     
+                     // Brief pause between batches to keep UI responsive
+                     if (i + BATCH_SIZE < filesToReadPaths.length) {
+                         await new Promise(resolve => setTimeout(resolve, 10));
+                     }
+                 }
+                 
+                 outputParts.push(...fileContentsResults);
+
+                 const customInstructions = customInstructionsInput.value.trim();
+                 if (customInstructions) {
+                     outputParts.push(`--- Custom Instructions ---\n${customInstructions}\n`);
+                 }
+
+                 outputElement.textContent = outputParts.join('');
+                 copyButton.style.display = 'block';
+                 
+                 // Only auto-copy if output is reasonable size
+                 if (outputElement.textContent.length < 500000) {
+                     copyToClipboard();
+                 }
+
+             } catch (error) {
+                  outputElement.textContent = `An error occurred during generation: ${error.message}\n\nStack trace:\n${error.stack}`;
+                  console.error("Generation Error:", error);
+             } finally {
+                 loadingIndicator.style.display = 'none';
+             }
+        }
+
+        function generateTextTree(parentElement, prefix, filesToReadPaths) {
+            let treeString = '';
+            if (!parentElement) return '';
+            const children = Array.from(parentElement.children).filter(el => el.tagName === 'LI');
+
+            children.forEach((li, index) => {
+                const checkbox = li.querySelector(':scope > label > input[type="checkbox"]');
+                const label = li.querySelector(':scope > label');
+                if (!checkbox || !label) return;
+
+                const name = Array.from(label.childNodes)
+                    .filter(node => node.nodeType === Node.TEXT_NODE)
+                    .map(node => node.textContent)
+                    .join('')
+                    .trim();
+                const path = li.dataset.path;
+                const isFolder = li.classList.contains('folder');
+                const isLast = index === children.length - 1;
+                const connector = isLast ? '└── ' : '├── ';
+
+                if (isFolder) {
+                    const childUl = li.querySelector(':scope > ul');
+                    let hasCheckedDescendants = false;
+                    
+                    // Check if any descendants are checked
+                    if (childUl) {
+                        const descendantCheckboxes = childUl.querySelectorAll('input[type="checkbox"]:checked');
+                        hasCheckedDescendants = descendantCheckboxes.length > 0;
+                    }
+
+                    // Show folder if it's checked OR if it has checked descendants
+                    if (checkbox.checked || hasCheckedDescendants) {
+                        treeString += `${prefix}${connector}${name}/\n`;
+                        if (childUl) {
+                            const newPrefix = prefix + (isLast ? '    ' : '│   ');
+                            treeString += generateTextTree(childUl, newPrefix, filesToReadPaths);
+                        }
+                    }
+                } else {
+                    // Only show and process files that are checked
+                    if (checkbox.checked) {
+                        treeString += `${prefix}${connector}${name}\n`;
+                        if (path) filesToReadPaths.push(path);
+                    }
+                }
+            });
+            return treeString;
+        }
+
+        function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => resolve(event.target.result);
+                reader.onerror = (event) => reject(new Error(`FileReader error: ${event.target.error.message || event.target.error}`));
+                reader.readAsText(file);
+            });
+        }
+
+        function copyToClipboard() {
+           const textToCopy = outputElement.textContent;
+           if (!textToCopy || textToCopy === 'Output will appear here...') {
+                console.warn("Copy attempt skipped: No content to copy.");
+                return;
+           }
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalHtml = copyButton.innerHTML;
+                 copyButton.innerHTML = '✅ Copied!';
+                 copyButton.style.backgroundColor = '#a0e0a0';
+                 setTimeout(() => {
+                    copyButton.innerHTML = originalHtml;
+                    copyButton.style.backgroundColor = '#e0e0e0';
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                const originalHtml = copyButton.innerHTML;
+                copyButton.innerHTML = '❌ Error';
+                 copyButton.style.backgroundColor = '#f0a0a0';
+                 setTimeout(() => {
+                    copyButton.innerHTML = originalHtml;
+                    copyButton.style.backgroundColor = '#e0e0e0';
+                }, 2000);
+            });
+        }
+
+        function saveCustomInstructionsContent() {
+            try {
+                localStorage.setItem(CUSTOM_INSTRUCTIONS_STORAGE_KEY, customInstructionsInput.value);
+            } catch (e) {
+                console.error("Failed to save custom instructions content to localStorage:", e);
+            }
+        }
+
+        function saveCustomInstructionsHeight() {
+             try {
+                localStorage.setItem(CUSTOM_INSTRUCTIONS_HEIGHT_KEY, customInstructionsInput.style.height);
+            } catch (e) {
+                console.error("Failed to save custom instructions height to localStorage:", e);
+            }
+        }
+
+        function loadCustomInstructions() {
+            try {
+                const savedInstructions = localStorage.getItem(CUSTOM_INSTRUCTIONS_STORAGE_KEY);
+                if (savedInstructions !== null) {
+                    customInstructionsInput.value = savedInstructions;
+                }
+                const savedHeight = localStorage.getItem(CUSTOM_INSTRUCTIONS_HEIGHT_KEY);
+                if (savedHeight) {
+                     const heightValue = parseInt(savedHeight, 10);
+                     if (heightValue >= minTextareaHeight) {
+                         customInstructionsInput.style.height = savedHeight;
+                     } else {
+                         customInstructionsInput.style.height = minTextareaHeight + 'px';
+                     }
+                } else {
+                    const initialSetHeight = parseInt(customInstructionsInput.style.height || '0', 10);
+                    if (initialSetHeight < minTextareaHeight) {
+                        customInstructionsInput.style.height = minTextareaHeight + 'px';
+                    }
+                }
+
+            } catch (e) {
+                console.error("Failed to load custom instructions from localStorage:", e);
+            }
+        }
+
+        function startResize(e) {
+            e.preventDefault();
+            isResizing = true;
+            initialY = e.clientY;
+            initialHeight = customInstructionsInput.offsetHeight;
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', stopResize);
+            document.body.style.cursor = 'row-resize';
+        }
+
+        function handleMouseMove(e) {
+            if (!isResizing) return;
+
+            const currentY = e.clientY;
+            const deltaY = currentY - initialY;
+
+            let newHeight = initialHeight - deltaY;
+
+            newHeight = Math.max(minTextareaHeight, newHeight);
+
+            customInstructionsInput.style.height = newHeight + 'px';
+        }
+
+        function stopResize() {
+            if (!isResizing) return;
+
+            isResizing = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', stopResize);
+            document.body.style.cursor = '';
+
+            saveCustomInstructionsHeight();
+        }
+
+    </script>
+</body>
+</html>
