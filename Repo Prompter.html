@@ -1148,9 +1148,12 @@
 
             const queryWords = query.split(/\s+/).filter(Boolean);
 
+            // Hide all items first
             allItems.forEach(li => {
                 li.style.display = 'none';
             });
+
+            const itemsToShow = new Set();
 
             allItems.forEach(li => {
                 const label = li.querySelector(':scope > label');
@@ -1164,14 +1167,29 @@
                     .toLowerCase();
 
                 if (isMatch(name, queryWords)) {
-                    let current = li;
-                    while (current && current.tagName === 'LI') {
-                        current.style.display = '';
-                        if (current.classList.contains('folder')) {
-                            current.classList.remove('collapsed');
-                        }
+                    // Add the matching item itself
+                    itemsToShow.add(li);
+
+                    // If it's a folder, add all its descendants
+                    if (li.classList.contains('folder')) {
+                        const descendants = li.querySelectorAll('li');
+                        descendants.forEach(desc => itemsToShow.add(desc));
+                    }
+
+                    // Add all its ancestors
+                    let current = li.parentElement.closest('li');
+                    while (current) {
+                        itemsToShow.add(current);
                         current = current.parentElement.closest('li');
                     }
+                }
+            });
+
+            // Show all the collected items and expand relevant folders
+            itemsToShow.forEach(li => {
+                li.style.display = '';
+                if (li.classList.contains('folder')) {
+                    li.classList.remove('collapsed');
                 }
             });
         }
