@@ -6,29 +6,193 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Repo Structure Tool</title>
     <style>
+        /* CSS Variables for Theming */
+        :root {
+            --bg-color: #f4f4f4;
+            --text-color: #222;
+            --panel-bg: #fff;
+            --border-color: #ccc;
+            --subtle-border-color: #eee;
+            --button-bg: #f0f0f0;
+            --button-hover-bg: #e0e0e0;
+            --button-text: #333;
+            --info-text: #555;
+            --loader-primary: #3498db;
+            --loader-secondary: #f3f3f3;
+            --input-bg: #fff;
+            --input-border: #ccc;
+            --output-bg: #fff;
+            --copy-button-bg: #e0e0e0;
+            --copy-button-hover-bg: #d0d0d0;
+            --copy-button-icon-fill: #000;
+            --loading-overlay-bg: rgba(255, 255, 255, 0.8);
+            --scrollbar-thumb-bg: #ccc;
+            --scrollbar-track-bg: #f1f1f1;
+        }
+
+        body.dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --panel-bg: #2a2a2a;
+            --border-color: #444;
+            --subtle-border-color: #383838;
+            --button-bg: #3e3e3e;
+            --button-hover-bg: #555;
+            --button-text: #e0e0e0;
+            --info-text: #aaa;
+            --loader-primary: #3498db;
+            --loader-secondary: #444;
+            --input-bg: #333;
+            --input-border: #555;
+            --output-bg: #222;
+            --copy-button-bg: #444;
+            --copy-button-hover-bg: #555;
+            --copy-button-icon-fill: #fff;
+            --loading-overlay-bg: rgba(0, 0, 0, 0.7);
+            --scrollbar-thumb-bg: #555;
+            --scrollbar-track-bg: #333;
+        }
+
+        /* Theme Switch Styles */
+        .theme-switch-wrapper {
+            position: absolute;
+            top: 7px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .theme-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+        }
+
+        input:checked+.slider {
+            background-color: var(--loader-primary);
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 1px var(--loader-primary);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        .slider.round {
+            border-radius: 24px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        /* Styles for both icons */
+        .theme-icon {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-color);
+            /* Use theme color for the icon stroke */
+            transition: stroke 0.3s;
+        }
+
+        /* By default, hide the moon icon */
+        .moon-icon {
+            display: none;
+        }
+
+        /* When in dark mode, hide the sun icon... */
+        body.dark-mode .sun-icon {
+            display: none;
+        }
+
+        /* ...and show the moon icon instead */
+        body.dark-mode .moon-icon {
+            display: block;
+        }
+
+        /* General Style Updates */
         body {
             font-family: sans-serif;
             display: flex;
             height: 100vh;
             margin: 0;
-            background-color: #f4f4f4;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             user-select: none;
             -moz-user-select: none;
             -webkit-user-select: none;
             -ms-user-select: none;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-track-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb-bg);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+
+        body.dark-mode ::-webkit-scrollbar-thumb:hover {
+            background: #666;
         }
 
         #sidebar {
             width: 350px;
-            border-right: 1px solid #ccc;
+            border-right: 1px solid var(--border-color);
             padding: 15px;
             overflow-y: auto;
-            background-color: #fff;
+            background-color: var(--panel-bg);
             height: 100%;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
+            transition: background-color 0.3s, border-color 0.3s;
         }
 
         #main-content {
@@ -60,12 +224,16 @@
             padding: 4px 8px;
             font-size: 0.9em;
             cursor: pointer;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
         }
 
         #tree-view {
             flex-grow: 1;
             overflow-y: auto;
-            border: 1px solid #eee;
+            border: 1px solid var(--subtle-border-color);
             padding: 5px;
             min-height: 100px;
             position: relative;
@@ -76,8 +244,8 @@
 
         #tree-loader {
             display: none;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+            border: 4px solid var(--loader-secondary);
+            border-top: 4px solid var(--loader-primary);
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -166,8 +334,8 @@
         #output-container {
             flex-grow: 1;
             position: relative;
-            border: 1px solid #ccc;
-            background-color: #fff;
+            border: 1px solid var(--border-color);
+            background-color: var(--output-bg);
             min-height: 100px;
             display: flex;
         }
@@ -180,6 +348,7 @@
             flex-grow: 1;
             box-sizing: border-box;
             font-size: 0.9em;
+            color: var(--text-color);
         }
 
         #copy-button {
@@ -188,27 +357,35 @@
             right: 25px;
             padding: 5px 8px;
             cursor: pointer;
-            background-color: #e0e0e0;
-            border: 1px solid #ccc;
+            background-color: var(--copy-button-bg);
+            border: 1px solid var(--border-color);
             border-radius: 3px;
             font-size: 1.2em;
             display: none;
             z-index: 10;
         }
 
+        #copy-button svg {
+            fill: var(--copy-button-icon-fill);
+        }
+
         #copy-button:hover {
-            background-color: #d0d0d0;
+            background-color: var(--copy-button-hover-bg);
         }
 
         button#generate-button {
             padding: 8px 15px;
             cursor: pointer;
             margin-top: 10px;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
         }
 
         h3 {
             margin-top: 0;
-            margin-bottom: 10px;
+            margin-bottom: 0;
         }
 
         h4 {
@@ -222,7 +399,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: rgba(255, 255, 255, 0.8);
+            background-color: var(--loading-overlay-bg);
             padding: 20px;
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
@@ -231,7 +408,7 @@
 
         .info {
             font-size: 0.8em;
-            color: #555;
+            color: var(--info-text);
             margin-top: 5px;
             margin-bottom: 10px;
         }
@@ -259,18 +436,44 @@
             min-height: 40px;
             font-family: monospace;
             font-size: 0.9em;
-            border: 1px solid #ccc;
+            border: 1px solid var(--input-border);
+            background-color: var(--input-bg);
+            color: var(--text-color);
             padding: 5px;
             margin: 0;
             overflow: auto;
             resize: none;
+        }
+
+        input[type="search"] {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-color);
+        }
+
+        input[type="file"]::file-selector-button {
+            padding: 5px 10px;
+            margin-right: 10px;
+            border-radius: 3px;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background-color: var(--button-hover-bg);
         }
     </style>
 </head>
 
 <body>
     <div id="sidebar">
-        <h3>Select Folder & Files</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3>Select Folder & Files</h3>
+        </div>
+
         <div class="info">Files matching .gitignore and `.git/` folders are excluded.</div>
         <input type="file" id="folder-input" webkitdirectory directory multiple>
 
@@ -317,6 +520,30 @@
     </div>
     <div id="loading">Generating...</div>
 
+    <div class="theme-switch-wrapper">
+        <svg class="theme-icon sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="theme-icon moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+
+        <label class="theme-switch" for="theme-checkbox" title="Toggle Dark Mode">
+            <input type="checkbox" id="theme-checkbox" />
+            <div class="slider round"></div>
+        </label>
+    </div>
+
     <script>
         const folderInput = document.getElementById('folder-input');
         const treeView = document.getElementById('tree-view');
@@ -361,7 +588,33 @@
         treeView.addEventListener('click', handleTreeClick);
         searchBar.addEventListener('input', handleSearch);
         customInstructionsInput.addEventListener('input', saveCustomInstructionsContent);
-        document.addEventListener('DOMContentLoaded', loadCustomInstructions);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCustomInstructions();
+
+            // --- Dark Mode Logic ---
+            const themeToggle = document.getElementById('theme-checkbox');
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.body.classList.add('dark-mode');
+                if (themeToggle) themeToggle.checked = true;
+            }
+
+            if (themeToggle) {
+                themeToggle.addEventListener('change', () => {
+                    if (themeToggle.checked) {
+                        document.body.classList.add('dark-mode');
+                        localStorage.setItem('theme', 'dark');
+                    } else {
+                        document.body.classList.remove('dark-mode');
+                        localStorage.setItem('theme', 'light');
+                    }
+                });
+            }
+            // --- End Dark Mode Logic ---
+        });
 
         resizerHandle.addEventListener('mousedown', startResize);
 
@@ -1032,7 +1285,7 @@
                 copyButton.style.backgroundColor = '#a0e0a0';
                 setTimeout(() => {
                     copyButton.innerHTML = originalHtml;
-                    copyButton.style.backgroundColor = '#e0e0e0';
+                    copyButton.style.backgroundColor = ''; // Revert to CSS variable
                 }, 1500);
             }).catch(err => {
                 console.error('Failed to copy text: ', err);
@@ -1041,7 +1294,7 @@
                 copyButton.style.backgroundColor = '#f0a0a0';
                 setTimeout(() => {
                     copyButton.innerHTML = originalHtml;
-                    copyButton.style.backgroundColor = '#e0e0e0';
+                    copyButton.style.backgroundColor = ''; // Revert to CSS variable
                 }, 2000);
             });
         }
