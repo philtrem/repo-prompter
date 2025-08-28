@@ -474,6 +474,11 @@
             <h3>Select Folder & Files</h3>
         </div>
 
+        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 10px; font-size: 0.9em;">
+            <input type="checkbox" id="include-unselected-tree" checked style="margin: 0;">
+            <label for="include-unselected-tree" style="cursor: pointer; user-select: none;">Show unselected in tree</label>
+        </div>
+
         <div class="info">Files matching .gitignore and `.git/` folders are excluded.</div>
         <input type="file" id="folder-input" webkitdirectory directory multiple>
 
@@ -562,6 +567,7 @@
         const customInstructionsInput = document.getElementById('custom-instructions');
         const resizerHandle = document.getElementById('resizer-handle');
         const customInstructionsContainer = document.getElementById('custom-instructions-container');
+        const includeUnselectedCheckbox = document.getElementById('include-unselected-tree');
 
         const binaryExtensions = new Set([
             'png', 'jpg', 'jpeg', 'gif', 'bmp', 'ico', 'tiff', 'webp',
@@ -1114,6 +1120,7 @@
                 const outputParts = [];
                 const filesToReadPaths = [];
                 const rootUl = treeView.querySelector(':scope > ul');
+                const includeUnselected = includeUnselectedCheckbox.checked;
 
                 let treeString = '';
                 if (rootUl && rootUl.children.length > 0) {
@@ -1122,21 +1129,27 @@
                         const rootCheckbox = rootLi.querySelector(':scope > label > input[type="checkbox"]');
                         const rootLabel = rootLi.querySelector(':scope > label');
                         const rootName = Array.from(rootLabel.childNodes).filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent).join('').trim();
+                        const childUl = rootLi.querySelector(':scope > ul');
 
-                        if (rootCheckbox && rootCheckbox.checked) {
+                        if (rootCheckbox.checked) {
                             treeString += `${rootName}/\n`;
-                            const childUl = rootLi.querySelector(':scope > ul');
                             if (childUl) {
-                                treeString += generateTextTree(childUl, '    ', filesToReadPaths);
+                                treeString += generateTextTree(childUl, '    ', filesToReadPaths, includeUnselected);
                             }
-                        } else if (rootCheckbox) {
-                            const childUl = rootLi.querySelector(':scope > ul');
-                            if (childUl) {
-                                treeString += generateTextTree(childUl, '', filesToReadPaths);
+                        } else { // Root is unchecked
+                            if (includeUnselected) {
+                                treeString += `${rootName}/ [content not included]\n`;
+                                if (childUl) {
+                                    treeString += generateTextTree(childUl, '    ', filesToReadPaths, includeUnselected);
+                                }
+                            } else {
+                                if (childUl) {
+                                    treeString += generateTextTree(childUl, '', filesToReadPaths, includeUnselected);
+                                }
                             }
                         }
                     } else {
-                        treeString += generateTextTree(rootUl, '', filesToReadPaths);
+                        treeString += generateTextTree(rootUl, '', filesToReadPaths, includeUnselected);
                     }
                 }
 
@@ -1239,7 +1252,7 @@
             }
         }
 
-        function generateTextTree(parentElement, prefix, filesToReadPaths) {
+        function generateTextTree(parentElement, prefix, filesToReadPaths, includeUnselected) {
             let treeString = '';
             if (!parentElement) return '';
             const children = Array.from(parentElement.children).filter(el => el.tagName === 'LI' && el.style.display !== 'none');
@@ -1258,30 +1271,46 @@
                 const isFolder = li.classList.contains('folder');
                 const isLast = index === children.length - 1;
                 const connector = isLast ? '└── ' : '├── ';
+                const isChecked = checkbox.checked;
 
-                if (isFolder) {
-                    const childUl = li.querySelector(':scope > ul');
-                    let hasCheckedDescendants = false;
+                let shouldRender = false;
 
-                    // Check if any descendants are checked
-                    if (childUl) {
-                        const descendantCheckboxes = childUl.querySelectorAll('input[type="checkbox"]:checked');
-                        hasCheckedDescendants = descendantCheckboxes.length > 0;
+                if (includeUnselected) {
+                    shouldRender = true;
+                } else {
+                    if (isFolder) {
+                        const childUl = li.querySelector(':scope > ul');
+                        let hasCheckedDescendants = false;
+                        if (childUl) {
+                            const descendantCheckboxes = childUl.querySelectorAll('input[type="checkbox"]:checked');
+                            hasCheckedDescendants = descendantCheckboxes.length > 0;
+                        }
+                        shouldRender = isChecked || hasCheckedDescendants;
+                    } else { // isFile
+                        shouldRender = isChecked;
+                    }
+                }
+
+                if (shouldRender) {
+                    let itemText = name;
+                    if (isFolder) itemText += '/';
+
+                    if (includeUnselected && !isChecked) {
+                        itemText += ' [content not included]';
                     }
 
-                    // Show folder if it's checked OR if it has checked descendants
-                    if (checkbox.checked || hasCheckedDescendants) {
-                        treeString += `${prefix}${connector}${name}/\n`;
+                    treeString += `${prefix}${connector}${itemText}\n`;
+
+                    if (isFolder) {
+                        const childUl = li.querySelector(':scope > ul');
                         if (childUl) {
                             const newPrefix = prefix + (isLast ? '    ' : '│   ');
-                            treeString += generateTextTree(childUl, newPrefix, filesToReadPaths);
+                            treeString += generateTextTree(childUl, newPrefix, filesToReadPaths, includeUnselected);
                         }
-                    }
-                } else {
-                    // Only show and process files that are checked
-                    if (checkbox.checked) {
-                        treeString += `${prefix}${connector}${name}\n`;
-                        if (path) filesToReadPaths.push(path);
+                    } else { // isFile
+                        if (isChecked) {
+                            if (path) filesToReadPaths.push(path);
+                        }
                     }
                 }
             });
