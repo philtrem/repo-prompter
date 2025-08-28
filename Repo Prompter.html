@@ -296,8 +296,9 @@
             cursor: default;
             display: inline-flex;
             align-items: center;
-            word-break: break-word;
-            max-width: 100%;
+            min-width: fit-content;
+            white-space: nowrap;
+            padding-right: 5px;
         }
 
         #tree-view input[type="checkbox"] {
@@ -1087,6 +1088,7 @@
             }
 
             label.appendChild(document.createTextNode(name));
+            label.title = name; // Tooltip to show long names without having to scroll
             li.appendChild(label);
 
             if (!node._isFile) {
