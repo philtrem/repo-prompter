@@ -563,6 +563,17 @@
         const resizerHandle = document.getElementById('resizer-handle');
         const customInstructionsContainer = document.getElementById('custom-instructions-container');
 
+        const binaryExtensions = new Set([
+            'png', 'jpg', 'jpeg', 'gif', 'bmp', 'ico', 'tiff', 'webp',
+            'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'deb', 'rpm', 'pkg',
+            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
+            'mp3', 'mp4', 'mkv', 'avi', 'mov', 'wmv', 'ogg', 'flac', 'wav', 'webm',
+            'eot', 'ttf', 'woff', 'woff2',
+            'exe', 'dll', 'bin', 'iso', 'img', 'dmg', 'so', 'o', 'a', 'lib', 'app',
+            'class', 'jar', 'pyc', 'nupkg', 'snupkg', 'wasm',
+            'db', 'sqlite', 'sqlite3', 'mdb', 'accdb', 'dat',
+            'swf', 'lockb', 'lock', 'psd', 'ai', 'indd'
+        ]);
 
         const CUSTOM_INSTRUCTIONS_STORAGE_KEY = 'repoStructureTool_customInstructions';
         const CUSTOM_INSTRUCTIONS_HEIGHT_KEY = 'repoStructureTool_customInstructionsHeight';
@@ -618,6 +629,14 @@
 
         resizerHandle.addEventListener('mousedown', startResize);
 
+        function formatFileSize(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
 
         function handleTreeClick(event) {
             const toggle = event.target.closest('.folder-toggle');
@@ -1169,15 +1188,22 @@
                         }
 
                         try {
+                            const extension = (file.name.split('.').pop() || '').toLowerCase();
+                            if (binaryExtensions.has(extension)) {
+                                return `--- File: ${displayPath} ---\n[Skipping binary file: ${file.name}, Size: ${formatFileSize(file.size)}]\n\n`;
+                            }
+
                             const isLikelyText = (file.type && (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('xml') || file.type.includes('javascript') || file.type.includes('typescript') || file.type.includes('yaml') || file.type.includes('toml') || file.type.includes('svg'))) ||
                                 /\.(txt|md|py|js|ts|jsx|tsx|html|htm|css|scss|sass|less|json|xml|yaml|yml|sh|bat|ps1|java|c|cpp|h|hpp|cs|go|rb|php|sql|rs|toml|ini|cfg|conf|log|svg|gitignore|dockerfile|env)$/i.test(file.name);
 
                             if (!isLikelyText && file.size > 1 * 1024 * 1024) {
-                                return `--- File: ${displayPath} ---\n[Skipping potentially large non-text file: ${file.type || 'unknown type'}, Size: ${Math.round(file.size / 1024)} KB]\n\n`;
+                                return `--- File: ${displayPath} ---\n[Skipping potentially large non-text file: ${file.type || 'unknown type'}, Size: ${formatFileSize(file.size)}]\n\n`;
                             }
 
                             const content = await readFileContent(file);
-                            return `--- File: ${displayPath} ---\n\`\`\`\n${content}\n\`\`\`\n\n`;
+                            // Sanitize content to prevent null characters from breaking clipboard
+                            const sanitizedContent = content.replace(/\0/g, '');
+                            return `--- File: ${displayPath} ---\n\`\`\`\n${sanitizedContent}\n\`\`\`\n\n`;
                         } catch (error) {
                             console.error(`Error reading file ${path}:`, error);
                             return `--- File: ${displayPath} ---\nError reading file: ${error.message}\n\n`;
@@ -1202,10 +1228,8 @@
                 outputElement.textContent = outputParts.join('');
                 copyButton.style.display = 'block';
 
-                // Only auto-copy if output is reasonable size
-                if (outputElement.textContent.length < 500000) {
-                    copyToClipboard();
-                }
+                // Auto-copy to clipboard after generation ---
+                copyToClipboard();
 
             } catch (error) {
                 outputElement.textContent = `An error occurred during generation: ${error.message}\n\nStack trace:\n${error.stack}`;
