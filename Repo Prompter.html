@@ -474,11 +474,6 @@
             <h3>Select Folder & Files</h3>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 10px; font-size: 0.9em;">
-            <input type="checkbox" id="include-unselected-tree" checked style="margin: 0;">
-            <label for="include-unselected-tree" style="cursor: pointer; user-select: none;">Show unselected in tree</label>
-        </div>
-
         <div class="info">Files matching .gitignore and `.git/` folders are excluded.</div>
         <input type="file" id="folder-input" webkitdirectory directory multiple>
 
@@ -491,10 +486,15 @@
                 <button id="collapse-all">Collapse All</button>
                 <button id="unselect-all">Unselect All</button>
             </div>
+
+            <div style="display: flex; flex-direction: row; align-items: center; gap: 5px; margin-bottom: 5px; font-size: 0.9em;">
+                <input type="checkbox" id="include-unselected-tree" checked style="margin: 0;">
+                <label for="include-unselected-tree" style="cursor: pointer; user-select: none;">Show unselected files in tree</label>
+            </div>
         </div>
 
         <input type="search" id="search-bar" placeholder="Search files/folders..."
-            style="display: none; width: 100%; box-sizing: border-box; padding: 5px; margin-top: 10px; margin-bottom: 5px;">
+            style="display: none; width: 100%; box-sizing: border-box; margin: 0 0 5px 0; padding: 5px;">
 
         <div id="tree-view">
             <div id="tree-loader"></div>
