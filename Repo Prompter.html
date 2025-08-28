@@ -206,6 +206,40 @@
             min-width: 0;
         }
 
+        /* Custom File Input */
+        .file-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+
+        .file-input-button {
+            padding: 5px 10px;
+            border-radius: 3px;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+
+        .file-input-button:hover {
+            background-color: var(--button-hover-bg);
+        }
+
+        #file-input-text {
+            color: var(--info-text);
+            font-size: 0.9em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-grow: 1;
+            min-width: 0;
+        }
+
         #tree-controls {
             display: none;
             gap: 10px;
@@ -451,21 +485,6 @@
             border: 1px solid var(--input-border);
             color: var(--text-color);
         }
-
-        input[type="file"]::file-selector-button {
-            padding: 5px 10px;
-            margin-right: 10px;
-            border-radius: 3px;
-            background-color: var(--button-bg);
-            color: var(--button-text);
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        input[type="file"]::file-selector-button:hover {
-            background-color: var(--button-hover-bg);
-        }
     </style>
 </head>
 
@@ -476,7 +495,11 @@
         </div>
 
         <div class="info">Files matching .gitignore and `.git/` folders are excluded.</div>
-        <input type="file" id="folder-input" webkitdirectory directory multiple>
+        <div class="file-input-wrapper">
+            <label for="folder-input" class="file-input-button">Choose Files</label>
+            <span id="file-input-text">No file chosen</span>
+            <input type="file" id="folder-input" webkitdirectory directory multiple style="display: none;">
+        </div>
 
         <div id="tree-controls">
             <div>
@@ -488,9 +511,11 @@
                 <button id="unselect-all">Unselect All</button>
             </div>
 
-            <div style="display: flex; flex-direction: row; align-items: center; gap: 5px; margin-bottom: 5px; font-size: 0.9em;">
+            <div
+                style="display: flex; flex-direction: row; align-items: center; gap: 5px; margin-bottom: 5px; font-size: 0.9em;">
                 <input type="checkbox" id="include-unselected-tree" checked style="margin: 0;">
-                <label for="include-unselected-tree" style="cursor: pointer; user-select: none;">Show unselected files in tree</label>
+                <label for="include-unselected-tree" style="cursor: pointer; user-select: none;">Show unselected files
+                    in tree</label>
             </div>
         </div>
 
@@ -552,6 +577,7 @@
 
     <script>
         const folderInput = document.getElementById('folder-input');
+        const fileInputText = document.getElementById('file-input-text');
         const treeView = document.getElementById('tree-view');
         const treeLoader = document.getElementById('tree-loader');
         const generateButton = document.getElementById('generate-button');
@@ -839,6 +865,22 @@
 
         function handleFolderSelection(event) {
             const files = event.target.files;
+
+            // Update the file input text display
+            if (files.length > 0) {
+                const potentialRoot = files[0].webkitRelativePath.split('/')[0];
+                if (potentialRoot) {
+                    fileInputText.textContent = potentialRoot;
+                    fileInputText.title = potentialRoot;
+                } else {
+                    fileInputText.textContent = '1 folder selected';
+                    fileInputText.title = '1 folder selected';
+                }
+            } else {
+                fileInputText.textContent = 'No file chosen';
+                fileInputText.title = '';
+            }
+
             treeControls.style.display = 'none';
             searchBar.style.display = 'none';
             searchBar.value = '';
