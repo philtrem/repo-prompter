@@ -647,6 +647,9 @@
         function handleTreeClick(event) {
             const toggle = event.target.closest('.folder-toggle');
             if (toggle) {
+                // Prevent the click from also triggering the checkbox via the label
+                event.preventDefault();
+
                 const li = toggle.closest('li.folder');
                 if (li) {
                     li.classList.toggle('collapsed');
