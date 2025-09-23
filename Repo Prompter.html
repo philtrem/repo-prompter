@@ -468,7 +468,7 @@
             width: 100%;
             box-sizing: border-box;
             height: 80px;
-            min-height: 40px;
+            min-height: 80px;
             font-family: monospace;
             font-size: 0.9em;
             border: 1px solid var(--input-border);
@@ -619,8 +619,7 @@
         let isResizing = false;
         let initialY = 0;
         let initialHeight = 0;
-        const minTextareaHeight = 40;
-
+        const minTextareaHeight = 80;
 
         folderInput.addEventListener('change', handleFolderSelection);
         generateButton.addEventListener('click', generateOutput);
